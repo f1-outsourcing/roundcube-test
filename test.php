@@ -20,8 +20,10 @@ class test extends rcube_plugin
         $this->add_hook('settings_actions', array($this, 'settings_actions'));
 
         //display template page
-        $this->register_action('test', array($this, 'init_html'));
+        $this->register_action('plugin.test', array($this, 'init_html'));
 
+        //save form values
+        $this->register_action('plugin.test.save', array($this, 'settingsformsave'));
 
     }
 
@@ -47,34 +49,66 @@ class test extends rcube_plugin
         return $args;
     }
 
+    public function settingsformsave()
+    {
+
+        $rcmail = rcmail::get_instance();
+
+        $enabled = rcube_utils::get_input_value('enabled', rcube_utils::INPUT_POST);
+        $name = rcube_utils::get_input_value('name', rcube_utils::INPUT_POST);
+
+        $config = $this->getConfig();
+        if ($config['enabled'] != $enabled) {
+            $config['enabled'] = $enabled;
+        }
+        if ($config['name'] != $name) {
+            $config['name'] = $name;
+        }
+
+        $this->saveConfig($config);
+
+        $rcmail->output->show_message($this->gettext('successfully_saved'), 'confirmation');
+    }
+
     public function settingsform()
     {
         $rcmail = rcmail::get_instance();
         $config = $this->getConfig();
 
-        $name = new html_inputfield(['name' => 'name', 'id' => 'name', 'size' => 50, 'class' => 'form-control']);
-
         $table = new html_table([ 'cols' => 2, 'class' => 'propform' ]);
 
         $field_id = 'enabled';
-        $checkbox_activate = new html_checkbox([ 'name' => $field_id, 'id' => $field_id, 'type' => 'checkbox' ]);
+        $enabled = new html_checkbox([ 'name' => $field_id, 'id' => $field_id, 'type' => 'checkbox' ]);
         $table->add('title', html::label($field_id, rcube::Q($this->gettext($field_id))));
-        $table->add(null, $checkbox_activate->show($config[$field_id] == true ? false : true));
+        $table->add(null, $enabled->show($config[$field_id] == true ? false : true));
 
         $field_id = 'name';
+        $name = new html_inputfield(['name' => 'name', 'id' => 'name', 'size' => 50, 'class' => 'form-control']);
         $table->add('title', html::label($field_id, rcube::Q($this->gettext($field_id))));
         $table->add(null, $name->show(!empty($config[$field_id]) ? $config[$field] : null));
 
-        $rcmail->output->add_gui_object('webauthnform', 'twofactor_webauthn-form');
         $form = $rcmail->output->form_tag([
           'id' => 'form1',
           'name' => 'form1',
           'method' => 'post',
-          'action' => './?_task=settings&_action=plugin.test_save',
+          'action' => './?_task=settings&_action=plugin.test.save',
         ], $table->show());
 
-        return $form;
+        $formcontent = html::div([ 'class' => 'boxcontent formcontent' ], $form);
+
+        $box = html::div([ 'class' => 'box formcontainer scroller' ], $formcontent);
+
+        return $box;
     }
+
+    private function saveConfig($config)
+    {
+        $rcmail = rcmail::get_instance();
+        $prefs = $rcmail->user->get_prefs();
+        $prefs['test'] = $config;
+        $rcmail->user->save_prefs($prefs);
+    }
+
 
     private function getConfig()
     {
