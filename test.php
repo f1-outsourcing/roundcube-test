@@ -13,65 +13,85 @@ class test extends rcube_plugin
 {
     public $task = 'settings';
 
+    private $rc;
+    private $ui_initialized = false;
+
     public function init()
     {
 
-        //adding the settings link
-        $this->add_hook('settings_actions', array($this, 'settings_actions'));
+        $this->rc = rcube::get_instance();
 
-        //display template page
-        $this->register_action('plugin.test', array($this, 'init_html'));
+        if ($this->rc->task == 'settings') {
+            //adding the settings link
+            $this->add_hook('settings_actions', array($this, 'settings_actions'));
 
-        //save form values
-        $this->register_action('plugin.test.save', array($this, 'settingsformsave'));
+            //display template page
+            $this->register_action('plugin.test', array($this, 'init_html'));
+            //$this->init_html();
+
+            //save form values
+            $this->register_action('plugin.test.save', array($this, 'settingsformsave'));
+        }
 
     }
 
 
     public function init_html()
     {
+
+        if (!empty($this->ui_initialized)) {
+            return;
+        }
+
+        $this->ui_initialized = true;
+
         $rcmail = rcmail::get_instance();
 
         $rcmail->output->add_handler('test.form1', array($this, 'settingsform'));
         $rcmail->output->set_pagetitle($this->gettext('Test plugin'));
         $this->api->output->add_handler('form1', [$this, 'settingsform']);
+        //$this->include_script('test.js');
         $rcmail->output->send('test.settingspage');
+
     }
 
     public function settings_actions($args)
     {
+
         $args['actions'][] = [
           'action' => 'plugin.test',
           'type' => 'link',
           'label' => 'test.config',
           'title' => 'test.config'
         ];
+
         return $args;
     }
 
     public function settingsformsave()
     {
 
-        $rcmail = rcmail::get_instance();
-
         $enabled = rcube_utils::get_input_value('enabled', rcube_utils::INPUT_POST);
         $name = rcube_utils::get_input_value('name', rcube_utils::INPUT_POST);
 
         $config = $this->getConfig();
+
         if ($config['enabled'] != $enabled) {
             $config['enabled'] = $enabled;
         }
+
         if ($config['name'] != $name) {
             $config['name'] = $name;
         }
 
         $this->saveConfig($config);
 
-        $rcmail->output->show_message($this->gettext('successfully_saved'), 'confirmation');
+        $this->init_html();
     }
 
     public function settingsform()
     {
+
         $rcmail = rcmail::get_instance();
         $config = $this->getConfig();
 
@@ -85,14 +105,17 @@ class test extends rcube_plugin
         $field_id = 'name';
         $name = new html_inputfield(['name' => 'name', 'id' => 'name', 'size' => 50, 'class' => 'form-control']);
         $table->add('title', html::label($field_id, rcube::Q($this->gettext($field_id))));
-        $table->add(null, $name->show(!empty($config[$field_id]) ? $config[$field] : null));
+        $table->add(null, $name->show(!empty($config[$field_id]) ? $config[$field_id] : null));
+
+        //adding input button so we do not need javascript
+        $inputbutton = new html_inputfield(['type' => 'submit', 'class' => 'btn btn-primary submit']);
 
         $form = $rcmail->output->form_tag([
           'id' => 'form1',
           'name' => 'form1',
           'method' => 'post',
           'action' => './?_task=settings&_action=plugin.test.save',
-        ], $table->show());
+        ], $table->show() . $inputbutton->show('Save'));
 
         $formcontent = html::div([ 'class' => 'boxcontent formcontent' ], $form);
 
@@ -103,22 +126,24 @@ class test extends rcube_plugin
 
     private function saveConfig($config)
     {
+
         $rcmail = rcmail::get_instance();
         $prefs = $rcmail->user->get_prefs();
         $prefs['test'] = $config;
         $rcmail->user->save_prefs($prefs);
+
     }
 
 
     private function getConfig()
     {
+
         $rcmail = rcmail::get_instance();
         $prefs = $rcmail->user->get_prefs();
         $config = $prefs['test'] ?? [];
-        if (!isset($config['enabled'])) {
-            $config['enabled'] = false;
-        }
+
         return $config;
+
     }
 
 }

@@ -2,7 +2,7 @@
 <roundcube:include file="includes/menu.html" />
 <roundcube:include file="includes/settings-menu.html" />
 
-<h1 class="voice"><roundcube:label name="test" /></h1>
+<h1 class="voice"><roundcube:label name="test.name" /></h1>
 
 <div id="layout-content" class="selected" role="main">
 	<div class="header">
@@ -16,9 +16,12 @@
 			<br>
 			<br>
 			<roundcube:object name="form1" id="form1" class="propform" />
+			</fieldset>
 		</div>
 		<div class="formbuttons">
-			<roundcube:button command="plugin.test.save" class="btn btn-primary submit" label="save" />
+			<!--
+			<roundcube:button command="plugin.test.save" form="form1" class="btn btn-primary submit" label="save" />
+			-->
 		</div>
 	</div>
 </div>
